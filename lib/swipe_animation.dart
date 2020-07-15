@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
-const LEFT_SECTION_WIDTH = 240.0;
+const SIDE_MENU_WIDTH = 240.0;
+const MIN_SCALE = 0.5;
+const MAX_SCALE = 1.0;
 
 class SwipeAnimation extends StatefulWidget {
   final Widget child;
@@ -17,7 +19,7 @@ class SwipeAnimationState extends State<SwipeAnimation>
     with SingleTickerProviderStateMixin {
   double initialX = 0;
   double lastX = 0;
-  bool drawingBackward = false;
+  bool swipingLeft = false;
 
   Animation<int> animation;
   AnimationController controller;
@@ -29,7 +31,7 @@ class SwipeAnimationState extends State<SwipeAnimation>
     controller = AnimationController(
         duration: const Duration(milliseconds: 500), vsync: this);
     animation =
-        IntTween(begin: 0, end: LEFT_SECTION_WIDTH.toInt()).animate(controller)
+    IntTween(begin: 0, end: SIDE_MENU_WIDTH.toInt()).animate(controller)
           ..addListener(() {
             _translateX(animation.value.toDouble());
           });
@@ -39,13 +41,15 @@ class SwipeAnimationState extends State<SwipeAnimation>
   Widget build(BuildContext context) {
     double scaleFactor = 0;
     double scale = 0;
-    if (drawingBackward) {
-      scaleFactor = ((240 - lastX) / 240) + 0.3;
-      scale = scaleFactor < 0.5 ? 0.5 : scaleFactor;
-      scale = scale > 1.0 ? 1.0 : scale;
+    if (swipingLeft) {
+      // To hide the menu, when user swipes back/left
+      scaleFactor = ((SIDE_MENU_WIDTH - lastX) / SIDE_MENU_WIDTH) + 0.3;
+      scale = scaleFactor < MIN_SCALE ? MIN_SCALE : scaleFactor;
+      scale = scale > MAX_SCALE ? MAX_SCALE : scale;
     } else {
-      scaleFactor = (240 - lastX) / 240;
-      scale = scaleFactor < 0.5 ? 0.5 : scaleFactor;
+      // To show the menu, when user swipes right/forward
+      scaleFactor = (SIDE_MENU_WIDTH - lastX) / SIDE_MENU_WIDTH;
+      scale = scaleFactor < MIN_SCALE ? MIN_SCALE : scaleFactor;
     }
 
     return GestureDetector(
@@ -55,24 +59,23 @@ class SwipeAnimationState extends State<SwipeAnimation>
       },
       onHorizontalDragUpdate: (details) {
         lastX = details.globalPosition.dx;
-        drawingBackward = lastX < initialX;
+        swipingLeft = lastX < initialX;
         _translateX(lastX);
       },
       onHorizontalDragEnd: (details) {
-        if (drawingBackward) {
-          if (lastX > LEFT_SECTION_WIDTH) {
+        if (swipingLeft) {
+          if (lastX > SIDE_MENU_WIDTH) {
             // Do nothing
-          } else if (initialX - lastX < LEFT_SECTION_WIDTH / 4) {
-            _translateX(LEFT_SECTION_WIDTH);
+          } else if (initialX - lastX < SIDE_MENU_WIDTH / 4) {
+            _translateX(SIDE_MENU_WIDTH);
           } else {
             _resetPosition(200);
           }
         } else {
-          print(lastX);
-          if (lastX > LEFT_SECTION_WIDTH) {
+          if (lastX > SIDE_MENU_WIDTH) {
             // Do nothing
-          } else if (lastX - initialX > (LEFT_SECTION_WIDTH / 4)) {
-            _translateX(LEFT_SECTION_WIDTH);
+          } else if (lastX - initialX > (SIDE_MENU_WIDTH / 4)) {
+            _translateX(SIDE_MENU_WIDTH);
           } else {
             _resetPosition(200);
           }
@@ -83,19 +86,9 @@ class SwipeAnimationState extends State<SwipeAnimation>
         alignment: AlignmentDirectional.centerEnd,
         child: scale == 1
             ? widget.child
-            : Container(
-                decoration: BoxDecoration(
-                    shape: BoxShape
-                        .rectangle, // BoxShape.circle or BoxShape.retangle
-                    //color: const Color(0xFF66BB6A),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black38,
-                        blurRadius: 8,
-                        spreadRadius: (1 - scale) * 8,
-                      ),
-                    ]),
-                child: widget.child,
+            : _getContainerWithShadow(
+                scale,
+                widget.child,
               ),
       ),
     );
@@ -107,14 +100,11 @@ class SwipeAnimationState extends State<SwipeAnimation>
     });
   }
 
-  void hideNavigationDrawer() {
-    controller.reverse(from: LEFT_SECTION_WIDTH);
-    //_resetPosition(200);
+  void hideNavigationDrawer([double dx = SIDE_MENU_WIDTH]) {
+    controller.reverse(from: dx);
   }
 
   void showNavigationDrawer() {
-    //_translateX(LEFT_SECTION_WIDTH);
-//    controller.reset();
     controller.forward(from: 0);
   }
 
@@ -125,9 +115,25 @@ class SwipeAnimationState extends State<SwipeAnimation>
 
     if (lastX == 0.0) {
       widget.navigationDrawerOpened(false);
-    } else if (lastX >= LEFT_SECTION_WIDTH) {
+    } else if (lastX >= SIDE_MENU_WIDTH) {
       widget.navigationDrawerOpened(true);
     }
+  }
+
+  Container _getContainerWithShadow(double scale, Widget child) {
+    return Container(
+      decoration: BoxDecoration(
+        shape: BoxShape.rectangle,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black38,
+            blurRadius: 8,
+            spreadRadius: (1 - scale) * 8,
+          ),
+        ],
+      ),
+      child: child,
+    );
   }
 
   @override
