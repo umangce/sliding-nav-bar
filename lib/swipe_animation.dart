@@ -31,7 +31,7 @@ class SwipeAnimationState extends State<SwipeAnimation>
     controller = AnimationController(
         duration: const Duration(milliseconds: 500), vsync: this);
     animation =
-    IntTween(begin: 0, end: SIDE_MENU_WIDTH.toInt()).animate(controller)
+        IntTween(begin: 0, end: SIDE_MENU_WIDTH.toInt()).animate(controller)
           ..addListener(() {
             _translateX(animation.value.toDouble());
           });
@@ -58,9 +58,18 @@ class SwipeAnimationState extends State<SwipeAnimation>
         lastX = 0;
       },
       onHorizontalDragUpdate: (details) {
-        lastX = details.globalPosition.dx;
-        swipingLeft = lastX < initialX;
-        _translateX(lastX);
+        lastX = (details.globalPosition.dx);
+        if (lastX <= SIDE_MENU_WIDTH) {
+          swipingLeft = lastX < initialX;
+          if (!swipingLeft) {
+            lastX = lastX / 2;
+            _translateX(lastX);
+          } else {
+            if (scale < 1.0) {
+              _translateX(lastX);
+            }
+          }
+        }
       },
       onHorizontalDragEnd: (details) {
         if (swipingLeft) {
